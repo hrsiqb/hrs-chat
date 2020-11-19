@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/SellIt/static/css/main.f34cad6e.chunk.css",
+    "main.js": "/SellIt/static/js/main.8d2d5247.chunk.js",
+    "main.js.map": "/SellIt/static/js/main.8d2d5247.chunk.js.map",
+    "runtime-main.js": "/SellIt/static/js/runtime-main.da3b8ac2.js",
+    "runtime-main.js.map": "/SellIt/static/js/runtime-main.da3b8ac2.js.map",
+    "static/css/2.d9ad5f5c.chunk.css": "/SellIt/static/css/2.d9ad5f5c.chunk.css",
+    "static/js/2.8324416a.chunk.js": "/SellIt/static/js/2.8324416a.chunk.js",
+    "static/js/2.8324416a.chunk.js.map": "/SellIt/static/js/2.8324416a.chunk.js.map",
+    "index.html": "/SellIt/index.html",
+    "precache-manifest.3232379db72e8d5c11c386d7f2d6fad0.js": "/SellIt/precache-manifest.3232379db72e8d5c11c386d7f2d6fad0.js",
+    "service-worker.js": "/SellIt/service-worker.js",
+    "static/css/2.d9ad5f5c.chunk.css.map": "/SellIt/static/css/2.d9ad5f5c.chunk.css.map",
+    "static/css/main.f34cad6e.chunk.css.map": "/SellIt/static/css/main.f34cad6e.chunk.css.map",
+    "static/js/2.8324416a.chunk.js.LICENSE.txt": "/SellIt/static/js/2.8324416a.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.da3b8ac2.js",
+    "static/css/2.d9ad5f5c.chunk.css",
+    "static/js/2.8324416a.chunk.js",
+    "static/css/main.f34cad6e.chunk.css",
+    "static/js/main.8d2d5247.chunk.js"
+  ]
+}
