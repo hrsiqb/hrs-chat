@@ -18,6 +18,7 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const storage = firebase.storage()
 
+const killAllEventLisners = () => firebase.database().ref('Users').off()
 function loginWithGoogle(res, rej) {
   // Google Auth Config
   var provider = new firebase.auth.GoogleAuthProvider();
@@ -58,16 +59,6 @@ const signUpWithEmail = (res, rej, data) => {
       // Handle Errors here.
       rej(error)
     });
-}
-
-const insertUserPhone = (res, rej, uId, phone) => {
-  firebase.database().ref(`Users/${uId}/phone`).set(phone)
-    .then((result) => {
-      res(result)
-    })
-    .catch(function (error) {
-      rej(error)
-    })
 }
 const insertUserData = (res, rej, provider, data) => {
   if (data.imageFile && provider === 'password') {
@@ -146,64 +137,16 @@ function logout(res, rej) {
       rej(error)
     })
 }
+function getNumberOfChildren(resolve, ref) {
+  firebase.database().ref(ref).once("value")
+    .then((snapshot) => resolve(snapshot.numChildren()))
+}
 var generateFirebaseKey = (ref) => {
   return firebase.database().ref(ref).push().key //generate a key for the Messages object
-}
-var insertAddData = (res, rej, data) => {
-  firebase.database().ref(`All Ads/${data.iId}`).set(data)
-    .then(result => res(result))
-    .catch(error => rej(error))
-}
-function getNumberOfAdds(resolve) {
-  var ref = firebase.database().ref("All Ads")
-  ref.once("value")
-    .then((snapshot) => {
-      resolve(snapshot.numChildren())
-    })
-}
-const getAllAdds = (firstRun, addsToAppend, mainResolve, mainReject) => {
-  //if number of user has been fetched, apply .on function
-  if (firstRun) {
-    var ref = firebase.database().ref("All Ads")
-    var promise = new Promise((resolve) => getNumberOfAdds(resolve))
-    promise.then((numberOfAdds) => {
-      let numberOfFetchedAdds = 0
-      let fetchedData = []
-      let appendedData = []
-      ref.on("child_added", (data) => {
-        fetchedData.splice(0, 0, data.val())
-        if (firstRun) {
-          let numberOfAppendedAdds = 0
-          numberOfFetchedAdds++
-          if (numberOfFetchedAdds === numberOfAdds) {
-            firstRun = false
-            let optimizedData = []
-            if (numberOfAdds > addsToAppend)
-              optimizedData = fetchedData.slice(numberOfAppendedAdds, numberOfAppendedAdds + addsToAppend)
-            else optimizedData = fetchedData
-            appendedData = Array.from(optimizedData)
-            let returnData = {
-              addsToAppend: 8,
-              numberOfAdds,
-              firstRun,
-              appendedData,
-              fetchedData,
-            }
-            mainResolve(returnData)
-          }
-        }
-      })
-    })
-  }
-  else mainReject("not first run")
 }
 
 const getUsers = callback => {
   firebase.database().ref('Users').on('child_added', user => callback(user.val()))
-}
-const getAddData = (resolve, reject, iId) => {
-  firebase.database().ref(`All Ads/${iId}`).once('value')
-    .then((returnedData) => resolve(returnedData.val()))
 }
 
 const getUserData = (resolve, reject, uId) => {
@@ -228,44 +171,51 @@ const insertMessage = (userInfo, chatInfo, res = false, rej = false) => {
     .catch(error => rej && rej(error.message))
 }
 const sendFriendRequest = (uId, toUid, res, rej) => {
+  firebase.database().ref(`Users/${uId}/sentRequests/${toUid}`).set(toUid)
   firebase.database().ref(`Users/${toUid}/requests/${uId}`).set(uId)
     .then(() => res(toUid))
     .catch((error) => rej(toUid))
-  firebase.database().ref(`Users/${uId}/sentRequests/${toUid}`).set(toUid)
 }
 const respondFriendRequest = (uId, toUid, response, res, rej) => {
+  if (response === 'accept') {
+    firebase.database().ref(`Users/${uId}/friends/${toUid}`).set(toUid)
+    firebase.database().ref(`Users/${toUid}/friends/${uId}`).set(uId)
+    res(toUid)
+  }
+  else res(toUid)
   firebase.database().ref(`Users/${toUid}/sentRequests/${uId}`).remove()
-    .then(() => {
-      firebase.database().ref(`Users/${uId}/requests/${toUid}`).remove()
-        .then(() => {
-          if (response === 'accept') {
-            firebase.database().ref(`Users/${uId}/friends/${toUid}`).set(toUid)
-            firebase.database().ref(`Users/${toUid}/friends/${uId}`).set(uId)
-            res(toUid)
-          }
-          else res(toUid)
-        })
-        .catch((error) => rej(toUid))
-    })
-    .catch((error) => rej(error))
+  firebase.database().ref(`Users/${uId}/requests/${toUid}`).remove()
+    .then(() => res(toUid))
+    .catch(() => rej(toUid))
 }
 const unFriend = (uId, toUid, res, rej) => {
   firebase.database().ref(`Users/${toUid}/friends/${uId}`).remove()
-    .then(() => {
-      firebase.database().ref(`Users/${uId}/friends/${toUid}`).remove()
-        .then(() => res(toUid))
-    })
+  firebase.database().ref(`Users/${uId}/friends/${toUid}`).remove()
+    .then(() => res(toUid))
     .catch(() => rej(toUid))
 }
-const addFriend = (data) => {
+const addFriend = data => {
   firebase.database().ref(`Users/${data.uId}/friends/${data.fId}`).set(data.fId)
+}
+const addFriendRequestEventListener = (uId, callback) => {
+  firebase.database().ref(`Users/${uId}/requests`).on('child_added', snapshot => {
+    callback('added', snapshot.val())
+  })
+  firebase.database().ref(`Users/${uId}/requests`).on('child_removed', snapshot => {
+    callback('removed', snapshot.val())
+  })
+}
+const addUserUpdatedEventListener = (uId, callback) => {
+  firebase.database().ref(`Users/${uId}`).on('value', snapshot => {
+    callback(snapshot.val())
+  })
 }
 export {
   storage,
   firebase as default,
-  insertAddData,
-  getAllAdds,
-  getAddData,
+  addFriendRequestEventListener,
+  addUserUpdatedEventListener,
+  killAllEventLisners,
   getUserData,
   getLoginDetails,
   getUsers,
@@ -274,7 +224,6 @@ export {
   signUpWithEmail,
   loginWithEmail,
   insertUserData,
-  insertUserPhone,
   logout,
   uploadImage,
   generateFirebaseKey,

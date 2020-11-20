@@ -3,8 +3,6 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App.jsx';
 import * as serviceWorker from './serviceWorker';
-import { Provider } from 'react-redux'
-import store from './store'
 import { SnackbarProvider } from 'notistack';
 import history from "./history";
 
@@ -29,9 +27,7 @@ ReactDOM.render(
     </Provider> */}
 
     <Router history={history}>
-      <Provider store={store}>
         <Route path="/" component={App} />
-      </Provider>
     </Router>
   </SnackbarProvider>,
   document.getElementById('root')

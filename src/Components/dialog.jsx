@@ -13,7 +13,6 @@ import IconButton from '@material-ui/core/IconButton';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import Visibility from '@material-ui/icons/Visibility';
 import VisibilityOff from '@material-ui/icons/VisibilityOff';
-import HiUserRemove from 'react-icons/hi'
 import EmailIcon from '@material-ui/icons/Email';
 import { getUsers, getUserData } from '../config/firebase'
 import PersonAddIcon from '@material-ui/icons/PersonAdd';
@@ -28,7 +27,8 @@ import {
   loginWithGoogle,
   sendFriendRequest,
   unFriend,
-  respondFriendRequest
+  respondFriendRequest,
+  addFriendRequestEventListener
 } from '../config/firebase'
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -62,7 +62,7 @@ class AddFriendDialog extends Component {
     super()
     this.state = {
       users: [],
-      requests: [],
+      requests: undefined,
       render: {
         firstRun: true,
         sendingRequest: [],
@@ -72,34 +72,36 @@ class AddFriendDialog extends Component {
       }
     }
   }
-  componentDidMount() {
-  }
-  componentWillUnmount() {
-    console.log('will unmount')
-  }
+  // componentDidMount() {
+  // }
+  // componentWillUnmount() {
+  //   console.log('will unmount')
+  // }
   componentDidUpdate(prevProps) {
-    console.log(prevProps.userInfo.isLoggedIn, this.props.userInfo.isLoggedIn)
     if (this.props.open && this.state.render.firstRun) {
       this.state.render.firstRun = false
       this.state.userInfo = this.props.userInfo
+      addFriendRequestEventListener(this.state.userInfo.uId, (type, fId) => this.displayRequest(type, fId))
+      this.state.userInfo.requests || (this.state.requests = false)
       getUsers(user => this.displayUser(user))
     }
-    if (this.props.userInfo.isLoggedIn !== prevProps.userInfo.isLoggedIn) {
-      console.log('here')
+    if (this.props !== prevProps) {
+      this.state.userInfo = this.props.userInfo
+      this.setState(this.state)
       !prevProps.userInfo.isLoggedIn &&
-        (this.setState({
-          users: [],
-          requests: [],
-          render: {
-            firstRun: true,
-            sendingRequest: [],
-            respondingRequest: [],
-            unFriendProcessing: [],
-            tab: 0
-          }
-        })
+        (
+          this.setState({
+            users: [],
+            requests: undefined,
+            render: {
+              firstRun: true,
+              sendingRequest: [],
+              respondingRequest: [],
+              unFriendProcessing: [],
+              tab: 0
+            }
+          })
         )
-
     }
   }
   showSnackBar = (msg, variant) => {
@@ -108,23 +110,41 @@ class AddFriendDialog extends Component {
       autoHideDuration: 5000
     });
   }
+  displayRequest = (type, fId) => {
+    console.log(type)
+    if (type === 'added') {
+      new Promise((res, rej) => getUserData(res, rej, fId))
+        .then(data => {
+          this.state.requests ? this.state.requests.push(data)
+            : this.state.requests = [data]
+          this.setState(this.state)
+        })
+    }
+    else {
+      this.state.requests.splice(this.state.requests.indexOf(fId))
+      !this.state.requests.length && (this.state.requests = false)
+      this.setState(this.state)
+    }
+  }
   displayUser = user => {
-    this.state.users.push(user)
-    this.setState(this.state)
+    if (user.uId !== this.state.userInfo.uId) {
+      this.state.users.push(user)
+      this.setState(this.state)
+    }
   }
   handleChange = (event, value) => {
-    if (value === 1) {
-      if (!this.state.requests.length && this.state.userInfo.requests) {
-        let requests = Object.values(this.state.userInfo.requests)
-        requests.map(uId => {
-          new Promise((res, rej) => getUserData(res, rej, uId))
-            .then(user => {
-              this.state.requests.push(user)
-              this.setState(this.state)
-            })
-        })
-      }
-    }
+    // if (value === 1) {
+    //   if (!this.state.requests.length && this.state.userInfo.requests) {
+    //     let requests = Object.values(this.state.userInfo.requests)
+    //     requests.map(uId => {
+    //       new Promise((res, rej) => getUserData(res, rej, uId))
+    //         .then(user => {
+    //           this.state.requests.push(user)
+    //           this.setState(this.state)
+    //         })
+    //     })
+    //   }
+    // }
     this.setState({ render: { ...this.state.render, tab: value } })
   }
   handleChangeIndex = (value) => this.setState({ render: { ...this.state.render, tab: value } })
@@ -177,42 +197,46 @@ class AddFriendDialog extends Component {
     let users = []
     let requests = []
     if (this.state.users.length) {
-      let sentRequests = this.state.userInfo.sentRequests
       this.state.users.map(user => {
-        if (user.uId !== this.state.userInfo.uId) {
-          users.push(
-            <div className="d-fr jc-sb ai-c b-b-1gry1 mb-3 p-0 pr-3">
-              <User bColor="b-n bc-n c-a" data={user} />
-              {
-                this.state.userInfo.friends && this.state.userInfo.friends[user.uId] ?
-                  <Fragment>
-                    {this.state.render.unFriendProcessing.includes(user.uId) ?
-                      <CircularProgress color="primary" size={30} />
-                      :
-                      <IconButton className="ol-n w-50px h-50px" value={user.uId} onClick={this.handleUnFriend}>
-                        <PersonRemove className="f-29 text-danger" />
-                      </IconButton>
-                    }
-                  </Fragment>
-                  :
-                  sentRequests[user.uId] ?
-                    <p className="m-0 text-secondary">Sent</p>
+        // if (user.uId !== this.state.userInfo.uId) {
+        users.push(
+          <div className="d-fr jc-sb ai-c b-b-1gry1 mb-3 p-0 pr-3">
+            <User bColor="b-n bc-n c-a" data={user} />
+            {
+              this.state.userInfo.friends && this.state.userInfo.friends[user.uId] ?
+                <Fragment>
+                  {this.state.render.unFriendProcessing.includes(user.uId) ?
+                    <CircularProgress color="primary" size={30} />
                     :
-                    this.state.render.sendingRequest.includes(user.uId) ?
-                      <CircularProgress color="primary" size={30} />
-                      :
-                      <IconButton className="ol-n w-50px h-50px" value={user.uId} onClick={this.handleFriendRequest}>
-                        <PersonAddIcon className="f-29 fc-blu1" />
-                      </IconButton>
-              }
-            </div>
-          )
-        }
+                    <IconButton className="ol-n w-50px h-50px" value={user.uId} onClick={this.handleUnFriend}>
+                      <PersonRemove className="f-29 text-danger" />
+                    </IconButton>
+                  }
+                </Fragment>
+                :
+                this.state.userInfo.sentRequests && this.state.userInfo.sentRequests[user.uId] ?
+                  <p className="m-0 text-secondary">Sent</p>
+                  :
+                  this.state.render.sendingRequest.includes(user.uId) ?
+                    <CircularProgress color="primary" size={30} />
+                    :
+                    <IconButton className="ol-n w-50px h-50px" value={user.uId} onClick={this.handleFriendRequest}>
+                      <PersonAddIcon className="f-29 fc-blu1" />
+                    </IconButton>
+            }
+          </div>
+        )
+        // }
       })
     }
     else users = <div className="h-100 d-f ai-c jc-c"><CircularProgress color="inherit" /></div>
-    if (this.state.requests) {
+
+    if (this.state.requests === undefined) {
+      requests = <div className="h-100 d-f ai-c jc-c"><CircularProgress color="inherit" /></div>
+    }
+    else if (this.state.requests) {
       this.state.requests.map(user => {
+        console.log(user)
         requests.push(
           <div className="d-fr jc-sb ai-c b-b-1gry1 mb-3 p-0 pr-3">
             <User bColor="bc-n c-a b-n" data={user} />
@@ -232,7 +256,7 @@ class AddFriendDialog extends Component {
         )
       })
     }
-    else users = <div className="h-100 d-f ai-c jc-c"><CircularProgress color="inherit" /></div>
+    else requests = "No Friend Requests"
     return (
       <Dialog onClose={() => this.props.onClose(false)} aria-labelledby="simple-dialog-title" open={this.props.open}>
         <div className="h-285px w-400px" >
@@ -261,7 +285,7 @@ class AddFriendDialog extends Component {
           </TabPanel>
           <TabPanel className="h-70p" value={this.state.render.tab} index={1}>
             <List className="p-3 ta-c h-100">
-              <div className="h-m-160px h-100 of-y-a">{requests.length ? requests : 'No Friend Requests'}</div>
+              <div className="h-m-160px h-100 of-y-a">{requests}</div>
             </List>
           </TabPanel>
           {/* </SwipeableViews> */}
