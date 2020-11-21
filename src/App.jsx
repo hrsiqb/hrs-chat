@@ -6,7 +6,13 @@ import Chat from './Components/chat';
 import { noUser } from './data'
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import { getLoginDetails, getUserData, getFriends, killAllEventLisners, addUserUpdatedEventListener } from './config/firebase'
+import {
+    getLoginDetails,
+    getUserData,
+    killFriendsEventLisner,
+    killAllEventLisners,
+    addUserUpdatedEventListener
+} from './config/firebase'
 import {
     Route, Switch,
     HashRouter as Router, // if deploying on sub-directory uncomment this line
@@ -37,13 +43,12 @@ class App extends Component {
     //     this.setState(this.state)
     // }
     userUpdated = data => {
-        this.state.userInfo.friends = data.friends || {}
+        this.state.userInfo.friends = data.friends
         this.state.userInfo.sentRequests = data.sentRequests || {}
         this.state.userInfo.requests = data.requests || {}
-        console.log(this.state.userInfo)
         this.setState(this.state)
     }
-    checkLoginStatus = () => {
+    checkLoginStatus = (uId = null) => {
         this.state.render.loading = true
         this.setState(this.state)
         new Promise((res, rej) => getLoginDetails(res, rej))
@@ -76,7 +81,9 @@ class App extends Component {
                 // }
             })
             .catch(() => {
-                killAllEventLisners()
+                killAllEventLisners('Users')
+                killAllEventLisners('Chats')
+                uId && killFriendsEventLisner(uId)
                 this.state.userInfo = {}
                 this.state.userInfo.isLoggedIn = false
                 this.state.render.loading = false

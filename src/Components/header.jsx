@@ -35,7 +35,7 @@ class Header extends Component {
         new Promise((res, rej) => logout(res, rej))
             .then(() => {
                 this.setState({ ...this.state, isLoggedIn: false, loading: false })
-                this.props.loginCallback()
+                this.props.loginCallback(this.state.userInfo.uId)
                 this.showSnackBar('Logout successful', 'success')
             })
             .catch((error) => {

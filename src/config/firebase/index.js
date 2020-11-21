@@ -18,7 +18,6 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const storage = firebase.storage()
 
-const killAllEventLisners = () => firebase.database().ref('Users').off()
 function loginWithGoogle(res, rej) {
   // Google Auth Config
   var provider = new firebase.auth.GoogleAuthProvider();
@@ -142,7 +141,7 @@ function getNumberOfChildren(resolve, ref) {
     .then((snapshot) => resolve(snapshot.numChildren()))
 }
 var generateFirebaseKey = (ref) => {
-  return firebase.database().ref(ref).push().key //generate a key for the Messages object
+  return firebase.database().ref(ref).push().key //generate a key for the Chats object
 }
 
 const getUsers = callback => {
@@ -153,13 +152,14 @@ const getUserData = (resolve, reject, uId) => {
   firebase.database().ref(`Users/${uId}`).once('value')
     .then((returnedData) => resolve(returnedData.val()))
 }
-const getMessages = (data, callback) => {
-  data.chatIds.map(chatId => {
-    firebase.database().ref(`Messages/${chatId}`).on('child_added', snapshot => snapshot.val() && callback(chatId, snapshot.val()))
-  })
+const removeChat = chatId => firebase.database().ref(`Chats/${chatId}`).remove()
+
+const generateChatId = (uId, fId) => {
+  if (fId < uId) return `${fId}_${uId}`
+  return `${uId}_${fId}`
 }
 const insertMessage = (userInfo, chatInfo, res = false, rej = false) => {
-  let ref = `Messages/${chatInfo.activeChat}`
+  let ref = `Chats/${chatInfo.activeChat}`
   let key = generateFirebaseKey(ref)
   firebase.database().ref(`${ref}/${key}`).set(
     {
@@ -197,11 +197,15 @@ const unFriend = (uId, toUid, res, rej) => {
 const addFriend = data => {
   firebase.database().ref(`Users/${data.uId}/friends/${data.fId}`).set(data.fId)
 }
-const addFriendRequestEventListener = (uId, callback) => {
-  firebase.database().ref(`Users/${uId}/requests`).on('child_added', snapshot => {
+const addMessagesEventListener = (cId, callback) => {
+    firebase.database().ref(`Chats/${cId}`).on('child_added', snapshot => snapshot.val() && callback(cId, snapshot.val()))
+}
+const addUsersChildEventListener = (ref, uId, callback) => {
+  console.log(uId)
+  firebase.database().ref(`Users/${uId}/${ref}`).on('child_added', snapshot => {
     callback('added', snapshot.val())
   })
-  firebase.database().ref(`Users/${uId}/requests`).on('child_removed', snapshot => {
+  firebase.database().ref(`Users/${uId}/${ref}`).on('child_removed', snapshot => {
     callback('removed', snapshot.val())
   })
 }
@@ -210,12 +214,18 @@ const addUserUpdatedEventListener = (uId, callback) => {
     callback(snapshot.val())
   })
 }
+const killFriendsEventLisner = uId => firebase.database().ref(`Users/${uId}/friends`).off()
+const killChatEventListener = chatId => firebase.database().ref(`Chats/${chatId}`).off()
+const killAllEventLisners = ref => firebase.database().ref(ref).off()
 export {
   storage,
   firebase as default,
-  addFriendRequestEventListener,
+  addMessagesEventListener,
+  addUsersChildEventListener,
   addUserUpdatedEventListener,
   killAllEventLisners,
+  killChatEventListener,
+  killFriendsEventLisner,
   getUserData,
   getLoginDetails,
   getUsers,
@@ -227,10 +237,11 @@ export {
   logout,
   uploadImage,
   generateFirebaseKey,
+  removeChat,
+  generateChatId,
   insertMessage,
   addFriend,
   unFriend,
   sendFriendRequest,
-  respondFriendRequest,
-  getMessages
+  respondFriendRequest
 }

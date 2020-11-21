@@ -14,7 +14,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import Visibility from '@material-ui/icons/Visibility';
 import VisibilityOff from '@material-ui/icons/VisibilityOff';
 import EmailIcon from '@material-ui/icons/Email';
-import { getUsers, getUserData } from '../config/firebase'
+import { getUsers, getUserData, removeChat, killChatEventListener } from '../config/firebase'
 import PersonAddIcon from '@material-ui/icons/PersonAdd';
 import PersonRemove from '@material-ui/icons/PersonRemove';
 import GroupIcon from '@material-ui/icons/Group';
@@ -28,7 +28,8 @@ import {
   sendFriendRequest,
   unFriend,
   respondFriendRequest,
-  addFriendRequestEventListener
+  addUsersChildEventListener,
+  generateChatId
 } from '../config/firebase'
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -72,36 +73,30 @@ class AddFriendDialog extends Component {
       }
     }
   }
-  // componentDidMount() {
-  // }
-  // componentWillUnmount() {
-  //   console.log('will unmount')
-  // }
   componentDidUpdate(prevProps) {
     if (this.props.open && this.state.render.firstRun) {
       this.state.render.firstRun = false
       this.state.userInfo = this.props.userInfo
-      addFriendRequestEventListener(this.state.userInfo.uId, (type, fId) => this.displayRequest(type, fId))
+      addUsersChildEventListener('requests', this.state.userInfo.uId, (type, fId) => this.displayRequest(type, fId))
       this.state.userInfo.requests || (this.state.requests = false)
       getUsers(user => this.displayUser(user))
     }
     if (this.props !== prevProps) {
       this.state.userInfo = this.props.userInfo
       this.setState(this.state)
-      !prevProps.userInfo.isLoggedIn &&
-        (
-          this.setState({
-            users: [],
-            requests: undefined,
-            render: {
-              firstRun: true,
-              sendingRequest: [],
-              respondingRequest: [],
-              unFriendProcessing: [],
-              tab: 0
-            }
-          })
-        )
+      if (!prevProps.userInfo.isLoggedIn) {
+        this.setState({
+          users: [],
+          requests: undefined,
+          render: {
+            firstRun: true,
+            sendingRequest: [],
+            respondingRequest: [],
+            unFriendProcessing: [],
+            tab: 0
+          }
+        })
+      }
     }
   }
   showSnackBar = (msg, variant) => {
@@ -111,7 +106,6 @@ class AddFriendDialog extends Component {
     });
   }
   displayRequest = (type, fId) => {
-    console.log(type)
     if (type === 'added') {
       new Promise((res, rej) => getUserData(res, rej, fId))
         .then(data => {
@@ -121,7 +115,12 @@ class AddFriendDialog extends Component {
         })
     }
     else {
-      this.state.requests.splice(this.state.requests.indexOf(fId))
+      let index = null
+      for (var i = 0; i < this.state.requests.length; i++) {
+        index = i
+        if (this.state.requests[i].uId === fId) break
+      }
+      this.state.requests.splice(index,1)
       !this.state.requests.length && (this.state.requests = false)
       this.setState(this.state)
     }
@@ -133,18 +132,6 @@ class AddFriendDialog extends Component {
     }
   }
   handleChange = (event, value) => {
-    // if (value === 1) {
-    //   if (!this.state.requests.length && this.state.userInfo.requests) {
-    //     let requests = Object.values(this.state.userInfo.requests)
-    //     requests.map(uId => {
-    //       new Promise((res, rej) => getUserData(res, rej, uId))
-    //         .then(user => {
-    //           this.state.requests.push(user)
-    //           this.setState(this.state)
-    //         })
-    //     })
-    //   }
-    // }
     this.setState({ render: { ...this.state.render, tab: value } })
   }
   handleChangeIndex = (value) => this.setState({ render: { ...this.state.render, tab: value } })
@@ -153,8 +140,9 @@ class AddFriendDialog extends Component {
     this.setState(this.state)
     new Promise((res, rej) => unFriend(this.state.userInfo.uId, e.currentTarget.value, res, rej))
       .then(toUid => {
+        var chatId = generateChatId(this.state.userInfo.uId, toUid)
+        removeChat(chatId)
         this.state.render.unFriendProcessing.splice(this.state.render.unFriendProcessing.indexOf(toUid))
-        delete this.state.userInfo.friends[toUid]
         this.setState(this.state)
       })
       .catch(toUid => {
@@ -198,7 +186,6 @@ class AddFriendDialog extends Component {
     let requests = []
     if (this.state.users.length) {
       this.state.users.map(user => {
-        // if (user.uId !== this.state.userInfo.uId) {
         users.push(
           <div className="d-fr jc-sb ai-c b-b-1gry1 mb-3 p-0 pr-3">
             <User bColor="b-n bc-n c-a" data={user} />
@@ -220,13 +207,22 @@ class AddFriendDialog extends Component {
                   this.state.render.sendingRequest.includes(user.uId) ?
                     <CircularProgress color="primary" size={30} />
                     :
-                    <IconButton className="ol-n w-50px h-50px" value={user.uId} onClick={this.handleFriendRequest}>
-                      <PersonAddIcon className="f-29 fc-blu1" />
-                    </IconButton>
+                    this.state.userInfo.requests && this.state.userInfo.requests[user.uId] ?
+                      <Fragment>
+                        <IconButton className="ol-n p-1" value={user.uId} onClick={this.handleResponse('accept')}>
+                          <CheckCircleIcon className="f-32 text-success" />
+                        </IconButton>
+                        <IconButton className="ol-n p-1" value={user.uId} onClick={this.handleResponse('decline')}>
+                          <CancelIcon className="f-32 text-danger" />
+                        </IconButton>
+                      </Fragment>
+                      :
+                      <IconButton className="ol-n w-50px h-50px" value={user.uId} onClick={this.handleFriendRequest}>
+                        <PersonAddIcon className="f-29 fc-blu1" />
+                      </IconButton>
             }
           </div>
         )
-        // }
       })
     }
     else users = <div className="h-100 d-f ai-c jc-c"><CircularProgress color="inherit" /></div>
@@ -236,7 +232,6 @@ class AddFriendDialog extends Component {
     }
     else if (this.state.requests) {
       this.state.requests.map(user => {
-        console.log(user)
         requests.push(
           <div className="d-fr jc-sb ai-c b-b-1gry1 mb-3 p-0 pr-3">
             <User bColor="bc-n c-a b-n" data={user} />
@@ -256,7 +251,7 @@ class AddFriendDialog extends Component {
         )
       })
     }
-    else requests = "No Friend Requests"
+    else requests = <div className="h-100 w-100 d-f jc-c ai-c f-20 f-b text-secondary">No Friend Requests</div>
     return (
       <Dialog onClose={() => this.props.onClose(false)} aria-labelledby="simple-dialog-title" open={this.props.open}>
         <div className="h-285px w-400px" >
