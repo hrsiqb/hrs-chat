@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import { Navbar, Nav } from 'react-bootstrap'
 import { noUser } from '../data'
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Link } from "react-router-dom"
 import { getLoginDetails, logout } from '../config/firebase'
 import { LoginDialogComp, RegisterDialogComp, AddFriendDialogComp } from './dialog'
 import Button from '@material-ui/core/Button';
@@ -85,9 +84,7 @@ class Header extends Component {
                     <CircularProgress color="inherit" />
                 </Backdrop>
                 <Navbar.Brand className="ml-3 p-0" style={{ fontSize: "30px" }}>
-                    <Link disabled={btnDisplay} className="n-l ol-n" to="/">
-                        <img src={require("../Images/chatappIcon.png")} alt="brand" width="37px" />
-                    </Link>
+                    <img src={require("../Images/chatappIcon.png")} alt="brand" width="37px" />
                 </Navbar.Brand>
                 {/* <Navbar.Toggle aria-controls="basic-navbar-nav" /> */}
                 <div id="basic-navbar-nav" className="d-c">

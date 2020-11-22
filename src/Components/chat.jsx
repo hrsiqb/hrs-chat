@@ -112,13 +112,6 @@ export default class Chat extends Component {
                 if (this.state.users.length) {
                     var bColor = ''
                     users = this.state.users.map((data, index) => {
-                        if (this.props.history.location.search) {
-                            let user = this.props.history.location.search.substring(1)
-                            if (user === data.uId) {
-                                bColor = 'bc-gry1'
-                                this.state.storage.activeUser = user
-                            }
-                        }
                         return <User index={index} onClick={this.handleUser} data={data} bColor={bColor} />
                     })
                     if (this.state.storage.activeUser) {

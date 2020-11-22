@@ -4,31 +4,12 @@ import './index.css';
 import App from './App.jsx';
 import * as serviceWorker from './serviceWorker';
 import { SnackbarProvider } from 'notistack';
-import history from "./history";
-
-import {
-  Route,
-  HashRouter as Router
-} from "react-router-dom"
-// const AppContainer = () => (
-//   <Router history={history}>
-//     <Provider store={store}>
-//       <Route path="/" component={App} />
-//     </Provider>
-//   </Router>
-// );
 
 ReactDOM.render(
   <SnackbarProvider maxSnack={7}>
-    {/* <Provider store={store}>
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    </Provider> */}
-
-    <Router history={history}>
-        <Route path="/" component={App} />
-    </Router>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
   </SnackbarProvider>,
   document.getElementById('root')
 );

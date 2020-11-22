@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
 import Header from './Components/header'
-import { Error404 } from './Components/error';
 import Chat from './Components/chat';
 import { noUser } from './data'
 import Backdrop from '@material-ui/core/Backdrop';
@@ -13,13 +12,6 @@ import {
     killAllEventLisners,
     addUserUpdatedEventListener
 } from './config/firebase'
-import {
-    Route, Switch,
-    HashRouter as Router, // if deploying on sub-directory uncomment this line
-    // BrowserRouter as Router, // if deploying on root directory uncomment this line
-    withRouter
-} from "react-router-dom"
-import history from './history'
 
 class App extends Component {
     constructor() {
@@ -96,17 +88,9 @@ class App extends Component {
                 <Backdrop className='fc-w zInd-12' open={this.state.render.loading}>
                     <CircularProgress color="inherit" />
                 </Backdrop>
-                <Header history={this.props.history} loginCallback={this.checkLoginStatus}
+                <Header loginCallback={this.checkLoginStatus}
                     userInfo={this.state.userInfo} />
-                <Chat history={this.props.history} userInfo={this.state.userInfo} />
-                {/* <Router>
-                    <Route path='/' children={<Header history={this.props.history} loginCallback={this.checkLoginStatus}
-                        userInfo={this.state.userInfo} />} />
-                    <Switch>
-                        <Route exact path={['/', '/home']} children={<Chat history={this.props.history} userInfo={this.state.userInfo} />} />
-                        <Route path={'/'} component={Error404} />
-                    </Switch>
-                </Router> */}
+                <Chat userInfo={this.state.userInfo} />
             </div>
         )
     }
